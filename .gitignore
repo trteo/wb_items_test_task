@@ -172,5 +172,4 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
-/.idea/.gitignore
-/.idea/material_theme_project_new.xml
+/.idea/
