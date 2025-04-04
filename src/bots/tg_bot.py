@@ -29,15 +29,32 @@ class TelegramBot:
     def __register_routs(self):
         @self.router.message(Command('help'))
         async def start(message: Message):
+            """ Возвращает информацию как пользоваться ботом """
+
             logger.debug(message.chat)
             logger.debug(message.text)
             logger.debug(message.message_id)
             logger.debug(message.from_user)
 
-            await message.reply("Здесь могла быть ваша реклама")
+            await message.reply(
+                "Отправь ссылку на товар и я верну тебе позиции товара по 6 запросам, основанных на описании товара"
+            )
 
         @self.router.message(F.text.regexp(fr'.*{WILDBERRIES_PRODUCT_URL_PATTERN}.*'))
         async def wildberries_product_processing(message: Message):
+            """
+            Обрабатывает сообщение, если в нем присутствует подобная подстрока:
+                `wildberries.ru/catalog/12456789/detail.aspx`
+            Возвращает позиции товара на странице в зависимости от запроса.
+            Запросы формируются из описания товара.
+
+            * Вырезает ссылку из полученного сообщения
+            * Пытается получить описание товара
+            * Выделяет потенциальные запросы
+            * Запускает поиск позиций товара на сайте
+
+            * Отвечает на сообщение списком из: `Запрос`, `№ страницы`, `№ позиции на`, `Ссылка на страницу`
+            """
             logger.debug(message.chat)
             logger.debug(f'Получено сообщение: {message.text}\n')
             logger.debug(message.message_id)
