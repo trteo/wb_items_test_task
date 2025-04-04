@@ -6,41 +6,48 @@ from aiogram.types import Message
 from loguru import logger
 
 from settings.config import settings
+from src.scrappers.wildberries import WildberriesProductScrapper
 
 WILDBERRIES_PRODUCT_URL_PATTERN = r'wildberries\.ru/catalog/\d+/detail\.aspx'
 
 
 class TelegramBot:
-    def __init__(self):
-        self.bot = Bot(token=settings.BOT_TOKEN.get_secret_value())
-        self.router = Router()
+    def __init__(self) -> None:
+        self._bot = Bot(token=settings.BOT_TOKEN.get_secret_value())
+        self._router = Router()
 
-        self.dp = Dispatcher()
-        self.dp.include_router(self.router)
+        self._dp = Dispatcher()
+        self._dp.include_router(self._router)
 
-    async def start_bot(self):
-        logger.info('Bot started')
+        self._wb_crapper = WildberriesProductScrapper()
+
+    async def start_bot(self) -> None:
+        logger.info('Запуск ТГ бота')
+
+        await self._wb_crapper.init()
 
         self.__register_routs()
-        await self.dp.start_polling(self.bot)
+        await self._dp.start_polling(self._bot)
 
-        logger.info('Bot ended')
+    async def stop_bot(self) -> None:
+        logger.info('Остановка ТГ бота')
 
-    def __register_routs(self):
-        @self.router.message(Command('help'))
+        await self._wb_crapper.close()
+        await self._bot.session.close()
+
+        logger.info('Бот завершен успешно')
+
+    def __register_routs(self) -> None:
+        @self._router.message(Command('help'))
         async def start(message: Message):
             """ Возвращает информацию как пользоваться ботом """
 
-            logger.debug(message.chat)
-            logger.debug(message.text)
-            logger.debug(message.message_id)
-            logger.debug(message.from_user)
-
+            logger.info(f'В боте был нажат help пользователем {message.from_user}')
             await message.reply(
                 "Отправь ссылку на товар и я верну тебе позиции товара по 6 запросам, основанных на описании товара"
             )
 
-        @self.router.message(F.text.regexp(fr'.*{WILDBERRIES_PRODUCT_URL_PATTERN}.*'))
+        @self._router.message(F.text.regexp(fr'.*{WILDBERRIES_PRODUCT_URL_PATTERN}.*'))
         async def wildberries_product_processing(message: Message):
             """
             Обрабатывает сообщение, если в нем присутствует подобная подстрока:
@@ -55,22 +62,18 @@ class TelegramBot:
 
             * Отвечает на сообщение списком из: `Запрос`, `№ страницы`, `№ позиции на`, `Ссылка на страницу`
             """
-            logger.debug(message.chat)
-            logger.debug(f'Получено сообщение: {message.text}\n')
-            logger.debug(message.message_id)
-            logger.debug(message.from_user)
-
-            cropped_url = re.search(rf'({WILDBERRIES_PRODUCT_URL_PATTERN})', message.text)
+            cropped_url = 'https://www.' + re.search(
+                rf'({WILDBERRIES_PRODUCT_URL_PATTERN})', message.text
+            ).group()
             logger.debug(f'Выделен адрес на товар: {cropped_url}')
 
             # product description block
-
-            # TODO get page by url
-            # TODO load details part
-            # TODO get description from page
+            product_scrapper = await self._wb_crapper.get_product_description(url=cropped_url)
+            logger.debug(f'Описание товара: {product_scrapper}\n Если оно верное, то первый бастион взят!!!')
 
             # query extracting block
 
             # search positions block
 
-            await message.answer(cropped_url.group())
+            await message.answer(cropped_url)
+
