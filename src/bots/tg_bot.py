@@ -62,18 +62,22 @@ class TelegramBot:
 
             * Отвечает на сообщение списком из: `Запрос`, `№ страницы`, `№ позиции на`, `Ссылка на страницу`
             """
-            cropped_url = 'https://www.' + re.search(
-                rf'({WILDBERRIES_PRODUCT_URL_PATTERN})', message.text
-            ).group()
-            logger.debug(f'Выделен адрес на товар: {cropped_url}')
 
-            # product description block
-            product_scrapper = await self._wb_crapper.get_product_description(url=cropped_url)
-            logger.debug(f'Описание товара: {product_scrapper}\n Если оно верное, то первый бастион взят!!!')
+            try:
+                cropped_url = 'https://www.' + re.search(
+                    rf'({WILDBERRIES_PRODUCT_URL_PATTERN})', message.text
+                ).group()
+                logger.debug(f'Выделен адрес на товар: {cropped_url}')
 
-            # query extracting block
+                # product description block
+                product_scrapper = await self._wb_crapper.get_product_description(url=cropped_url)
+                logger.debug(f'Описание товара: {product_scrapper}\n Если оно верное, то первый бастион взят!!!')
 
-            # search positions block
+                # query extracting block
 
-            await message.answer(cropped_url)
+                # search positions block
+
+                await message.reply(cropped_url)
+            except Exception as e:
+                await message.reply(f'При запросе произошла ошибка:\n{e}')
 
