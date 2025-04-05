@@ -1,3 +1,5 @@
+import asyncio
+
 from loguru import logger
 
 from src.scrappers.wildberries.wildberries_base import WildberriesBaseScrapper
@@ -36,3 +38,17 @@ class WildberriesProductScrapper(WildberriesBaseScrapper):
         except Exception as e:
             logger.error(f'Ошибка при попытке получить описание товара по ссылке {url}: {e}')
             raise e
+
+
+async def main():
+    scraper = WildberriesProductScrapper()
+
+    logger.info('Инициализация скраппера Wildberries прошла успешно')
+    await scraper.init()
+    product_url = 'https://www.wildberries.ru/catalog/149751046/detail.aspx'
+
+    res = await scraper.get_product_description(url=product_url)
+    print(f'Result: {res}')
+
+if __name__ == '__main__':
+    asyncio.run(main())
