@@ -6,12 +6,18 @@ from aiogram.types import Message
 from loguru import logger
 
 from settings.config import settings
+from src.queries_extraction.rake import RAKEQueryExtractor
 from src.scrappers.wildberries import WildberriesProductScrapper
 
 WILDBERRIES_PRODUCT_URL_PATTERN = r'wildberries\.ru/catalog/\d+/detail\.aspx'
 
 
 class TelegramBot:
+    """
+    Класс отвечает за принятие и обработку сообщений из ТГ бота.
+    Требует для работы определения переменой BOT_TOKEN в переменных окружения settings.env
+    """
+
     def __init__(self) -> None:
         self._bot = Bot(token=settings.BOT_TOKEN.get_secret_value())
         self._router = Router()
@@ -20,6 +26,7 @@ class TelegramBot:
         self._dp.include_router(self._router)
 
         self._wb_crapper = WildberriesProductScrapper()
+        self._queries_extractor = RAKEQueryExtractor()
 
     async def start_bot(self) -> None:
         logger.info('Запуск ТГ бота')
@@ -74,6 +81,9 @@ class TelegramBot:
                 logger.debug(f'Описание товара: {product_scrapper}\n Если оно верное, то первый бастион взят!!!')
 
                 # query extracting block
+
+                queries = self._queries_extractor.extract_query_from_description(product_scrapper)
+                logger.debug(f'Возможные запросы товара: {queries}\n Если оно хоть немного похоже на правду (нет), то мы прошли ВТОРОЙ бастион!!!')
 
                 # search positions block
 

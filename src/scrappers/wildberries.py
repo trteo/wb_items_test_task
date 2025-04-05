@@ -48,10 +48,10 @@ class WildberriesProductScrapper:
         section_description_selector = 'section.product-details__description p.option__text'
 
         try:
-
             logger.info(f'Начинаю поиск товара с url: {url}')
             await self._page.goto(url, wait_until='networkidle')
 
+            # TODO райзить специализированную ошибку если страница не нашлась. В эксепшене создать и в боте ловить
             logger.info(f'Ожидаем появление кнопки "Характеристики и описание" для товара с url: {url}')
             await self._page.wait_for_selector(button_description_selector)
 
@@ -67,7 +67,3 @@ class WildberriesProductScrapper:
         except Exception as e:
             logger.error(f'Ошибка при попытке получить описание товара по ссылке {url}: {e}')
             raise e
-
-
-if __name__ == '__main__':
-    asyncio.run(WildberriesProductScrapper().init())
