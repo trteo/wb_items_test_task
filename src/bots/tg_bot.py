@@ -87,6 +87,9 @@ class TelegramBot:
 
                 # search positions block
 
+                positions = await self._wb_crapper.find_product_positions(product_url=cropped_url, queries=queries)
+                logger.info(f'По выделенным запросам товар находится на: {positions}')
+
                 await message.reply(cropped_url)
             except Exception as e:
                 await message.reply(f'При запросе произошла ошибка:\n{e}')
