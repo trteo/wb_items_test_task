@@ -8,7 +8,6 @@ class WildberriesBaseScrapper:
         self._playwright: Playwright = None
         self._browser: Browser = None
         self._context: BrowserContext = None
-        self._page: Page = None
 
     async def init(self) -> None:
         """ Инициализация скраппера """
@@ -20,18 +19,20 @@ class WildberriesBaseScrapper:
             viewport={'width': 1920, 'height': 1080},
             user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:136.0) Gecko/20100101 Firefox/136.0',
         )
-        self._page = await self._context.new_page()
+
+    async def _create_page(self) -> Page:
+        """ Создаем новую страницу для запросов """
+        return await self._context.new_page()
 
     async def close(self) -> None:
         """ Закрытие всех ресурсов скраппера """
 
         if self._playwright:
             await self._playwright.stop()
-        self._page = None
         self._context = None
         self._browser = None
 
     async def _ensure_browser_initialized(self) -> None:
         """ Проверка инициализации браузера """
-        if not self._page:
+        if not self._browser:
             await self.init()
