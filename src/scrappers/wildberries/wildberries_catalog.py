@@ -48,8 +48,11 @@ class WildberriesCatalogScrapper(WildberriesBaseScrapper):
 
         for query in queries:
             logger.info(f'Начинаю поиск товара по запросу: {query}')
-            search_url = self.__build_search_url(query)
-            results[query] = await self.__search_product_by_query(search_url, product_url)
+            search_url = self.__build_search_url(query=query)
+            results[query] = await self.__search_product_by_query(
+                search_page_template_url=search_url,
+                product_url=product_url
+            )
 
         return results
 
@@ -113,7 +116,7 @@ class WildberriesCatalogScrapper(WildberriesBaseScrapper):
         try:
             await self.__navigate_to_searching_page(search_page_url=search_page_url, page=page)
             product_cards = await self.__get_product_cards_from_page(page=page)
-            return await self.__find_product_position(product_cards, product_url)
+            return await self.__find_product_position(product_cards=product_cards, product_url=product_url)
         finally:
             await page.close()
 

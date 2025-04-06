@@ -27,15 +27,12 @@ class WildberriesProductScrapper(WildberriesBaseScrapper):
 
         try:
             logger.info(f'Начинаю поиск товара с url: {url}')
-            await page.goto(url, wait_until='networkidle')
+            await page.goto(url, wait_until='domcontentloaded')
 
-            # TODO райзить специализированную ошибку если страница не нашлась. В эксепшене создать и в боте ловить
-            """
-            
-
-            """
             logger.info(f'Ожидаем появление кнопки "Характеристики и описание" для товара с url: {url}')
             await page.wait_for_selector(button_description_selector)
+
+            await self.__check_if_product_exist(url=url, page=page)
 
             logger.info(f'Загружается кнопка получения дополнительной информации для товара с url: {url}!')
             await page.click(button_description_selector)
@@ -53,7 +50,7 @@ class WildberriesProductScrapper(WildberriesBaseScrapper):
     @staticmethod
     async def __check_if_product_exist(url: str, page: Page):
         """ Проверяем, удалось ли открыть страницу с продуктом """
-        if await page.query_selector('div.product-page__grid'):
+        if await page.query_selector('div.content404'):
             logger.info(f'Не найдена страница: {url}')
             raise ProductNotFound
 

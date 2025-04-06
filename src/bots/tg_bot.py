@@ -96,7 +96,7 @@ class TelegramBot:
                     product_scrapper = await self._wb_product_scrapper.get_product_description(url=cropped_url)
                     logger.debug(f'Описание товара: {product_scrapper}\n Если оно верное, то первый бастион взят!!!')
                 except ProductNotFound:
-                    await message.reply(f'Не удалось найти товар, проверьте актуальность ссылки')
+                    await replied_message.edit_text(f'Не удалось найти товар, проверьте актуальность ссылки')
                     return
 
                 # query extracting block
@@ -105,9 +105,7 @@ class TelegramBot:
 
                 new_message = f'Найдены возможные запросы:\n{"\n".join(queries)}'
                 logger.debug(f'Обновляю отправленное сообщение. Новое сообщение:\n{new_message}')
-                await replied_message.edit_text(
-                    new_message
-                )
+                await replied_message.edit_text(new_message)
 
                 # search positions block
 
