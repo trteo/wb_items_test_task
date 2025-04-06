@@ -9,6 +9,7 @@ from loguru import logger
 
 from settings.config import settings
 from src.queries_extraction.rake import RAKEQueryExtractor
+from src.scrappers.exceptions import ProductNotFound
 from src.scrappers.models import ProductPosition
 from src.scrappers.wildberries.wildberries_product import WildberriesProductScrapper
 from src.scrappers.wildberries.wildberries_catalog import WildberriesCatalogScrapper
@@ -82,6 +83,7 @@ class TelegramBot:
             """
 
             try:
+                # preparing link
                 cropped_url = 'https://www.' + re.search(
                     rf'({WILDBERRIES_PRODUCT_URL_PATTERN})', message.text
                 ).group()
@@ -89,10 +91,23 @@ class TelegramBot:
 
                 replied_message = await message.reply(f'Начинаю поиск потенциальных запросов для товара: {cropped_url}')
 
-                # query extracting block
+                # product description block
+                try:
+                    product_scrapper = await self._wb_product_scrapper.get_product_description(url=cropped_url)
+                    logger.debug(f'Описание товара: {product_scrapper}\n Если оно верное, то первый бастион взят!!!')
+                except ProductNotFound:
+                    await message.reply(f'Не удалось найти товар, проверьте актуальность ссылки')
+                    return
 
+                # query extracting block
                 queries = self._queries_extractor.extract_query_from_description(product_scrapper)
-                logger.debug(f'Возможные запросы товара: {queries}\n Если оно хоть немного похоже на правду (нет), то мы прошли ВТОРОЙ бастион!!!')
+                logger.debug(f'Возможные запросы товара: {queries}')
+
+                new_message = f'Найдены возможные запросы:\n{"\n".join(queries)}'
+                logger.debug(f'Обновляю отправленное сообщение. Новое сообщение:\n{new_message}')
+                await replied_message.edit_text(
+                    new_message
+                )
 
                 # search positions block
 

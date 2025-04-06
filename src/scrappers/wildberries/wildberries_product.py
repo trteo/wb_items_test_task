@@ -2,6 +2,8 @@ import asyncio
 
 from loguru import logger
 
+from src.scrappers.exceptions import ProductNotFound
+from playwright.async_api import Page
 from src.scrappers.wildberries.wildberries_base import WildberriesBaseScrapper
 
 
@@ -30,9 +32,7 @@ class WildberriesProductScrapper(WildberriesBaseScrapper):
             # TODO райзить специализированную ошибку если страница не нашлась. В эксепшене создать и в боте ловить
             """
             
-            if await page.query_selector('div.content404'):
-                logger.info(f'Не найдена страница: {page_url}')
-                raise PageOutOfRangeError
+
             """
             logger.info(f'Ожидаем появление кнопки "Характеристики и описание" для товара с url: {url}')
             await page.wait_for_selector(button_description_selector)
@@ -46,9 +46,16 @@ class WildberriesProductScrapper(WildberriesBaseScrapper):
 
             logger.info(f'Найдено описание товара для товара с url: {url}:\n {description_content}')
             return description_content
-        except Exception as e:
-            logger.error(f'Ошибка при попытке получить описание товара по ссылке {url}: {e}')
+        except ProductNotFound as e:
+            logger.error(f'Не удалось найти товар: {url}')
             raise e
+
+    @staticmethod
+    async def __check_if_product_exist(url: str, page: Page):
+        """ Проверяем, удалось ли открыть страницу с продуктом """
+        if await page.query_selector('div.product-page__grid'):
+            logger.info(f'Не найдена страница: {url}')
+            raise ProductNotFound
 
 
 async def main():

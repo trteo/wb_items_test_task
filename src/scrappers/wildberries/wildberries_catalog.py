@@ -5,7 +5,7 @@ from loguru import logger
 from playwright.async_api import ElementHandle
 from playwright.async_api import Page
 
-from src.scrappers.exceptions import PageOutOfRangeError
+from src.scrappers.exceptions import CatalogFindItemsError
 from src.scrappers.models import ProductPosition
 from src.scrappers.wildberries.wildberries_base import WildberriesBaseScrapper
 
@@ -97,7 +97,7 @@ class WildberriesCatalogScrapper(WildberriesBaseScrapper):
                 ):
                     logger.info(f'Товар найден на странице {page_number}, позиции {position}')
                     return ProductPosition(page_number=page_number, position_on_page=position, page_url=search_page_url)
-            except PageOutOfRangeError:
+            except CatalogFindItemsError:
                 break
 
         return None
@@ -125,7 +125,7 @@ class WildberriesCatalogScrapper(WildberriesBaseScrapper):
             await page.goto(search_page_url, wait_until='domcontentloaded')
             await page.wait_for_selector('div.catalog-page:not(.hide)')
             await self.__check_for_no_result(page_url=search_page_url, page=page)
-        except PageOutOfRangeError as e:
+        except CatalogFindItemsError as e:
             raise e
         logger.debug(f'Зашли на страницу {search_page_url}')
         await self.__scroll_page_to_the_end(page=page)
@@ -168,13 +168,13 @@ class WildberriesCatalogScrapper(WildberriesBaseScrapper):
         # Проверка случая когда просто говорит что ничего не нашел
         if await page.query_selector('div.catalog-page__not-found'):
             logger.info(f'На странице {page_url} ничего не нашлось')
-            raise PageOutOfRangeError
+            raise CatalogFindItemsError
 
         # Проверка случая, когда предлагает товары по похожему запросу
         searching_result_text = await page.query_selector('p.searching-results__text:not(.hide)')
         if searching_result_text and 'ничего не нашлось' in await searching_result_text.text_content():
             logger.info(f'На странице {page_url} ничего не нашлось')
-            raise PageOutOfRangeError
+            raise CatalogFindItemsError
 
     @staticmethod
     async def __scroll_page_to_the_end(page: Page):

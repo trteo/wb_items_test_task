@@ -1,6 +1,10 @@
-class PaginationError(Exception):
+class ContentError(Exception):
     pass
 
 
-class PageOutOfRangeError(PaginationError):
+class ProductNotFound(ContentError):
+    pass
+
+
+class CatalogFindItemsError(ContentError):
     pass
