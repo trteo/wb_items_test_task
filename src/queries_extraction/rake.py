@@ -1,6 +1,7 @@
 from nltk.corpus import stopwords
 from rake_nltk import Rake
 from typing import List
+from loguru import logger
 import re
 
 
@@ -10,27 +11,35 @@ class RAKEQueryExtractor:
     """
 
     def __init__(self):
+        self.MAX_OUTPUT_PHRASES = 3
+        self.MIN_PHRASE_LENGTH = 2
+        self.MAX_PHRASE_LENGTH = 5
+
         self.rake = Rake(
             stopwords=stopwords.words('russian'),
-            min_length=4,  # TODO take from settings
-            max_length=5,  # TODO take from settings
+            min_length=self.MIN_PHRASE_LENGTH,
+            max_length=self.MAX_PHRASE_LENGTH,
         )
 
     def extract_query_from_description(self, description: str) -> List[str]:
-        """ Находим вероятные запросы на основании полученного описания """
-        max_phrases = 10  # TODO take from settings
+        """ Извлечение потенциальных поисковых запросы из описания товара.
 
-        self.rake.extract_keywords_from_text(description)
-        phrases = self.rake.get_ranked_phrases()[:max_phrases]
+        :param description: Текстовое описание товара
+        :return: Список очищенных поисковых запросов (не более max_phrases)
+        """
+        phrases = self._extract_key_phrases(text=description)
+        return self._clean_and_normalize_phrases(phrases=phrases)
 
-        # TODO вынести в отдельный метод
-        # Очистка и формирование запросов
-        queries = []
-        for phrase in phrases:
-            clean_phrase = self.__clean_text(phrase)
-            queries.append(clean_phrase.lower())
+    def _extract_key_phrases(self, text: str) -> List[str]:
+        """ Извлечение ключевых фразы из текста с помощью RAKE."""
 
-        return queries
+        self.rake.extract_keywords_from_text(text)
+        return self.rake.get_ranked_phrases()[:self.MAX_OUTPUT_PHRASES]
+
+    def _clean_and_normalize_phrases(self, phrases: List[str]) -> List[str]:
+        """ Очистка и нормализация списка фраз """
+
+        return [self.__clean_text(phrase).lower() for phrase in phrases]
 
     @staticmethod
     def __clean_text(text: str) -> str:
@@ -42,3 +51,25 @@ class RAKEQueryExtractor:
         text = re.sub(r'[^\w\s]', ' ', text)
         text = re.sub(r'\s+', ' ', text).strip()
         return text
+
+
+def main():
+    queries = RAKEQueryExtractor().extract_query_from_description(
+        '''Высококачественные матрасы от компании Sonox гарантируют здоровый и крепкий сон, предназначены для 
+        полноценного расслабления и снятия усталости.  Двухсторонняя модель Mega Plus Foam – беспружинный матрас 
+        повышенной жесткости с ортопедическим эффектом и съемным чехлом. Размер 160х200 см. Выдерживает регулярную 
+        нагрузку до 320 кг без проминания и деформации. Мультизональный профиль на поверхности матраса сонокс создает 
+        7 зон разной жесткости. В области плеч матрас менее жесткий, чтобы исключить излишнее давление на плечи и 
+        исключить затекание конечностей. В области таза – средней жесткости, чтобы обеспечить поддержку и предотвратить 
+        излишнее давление или ощущение проваливания Усиленная жесткость и упругость по всей площади спального места 
+        обеспечивает точечную поддержку тела с учетом анатомических и ортопедических особенностей человека. 
+        '''
+    )
+
+    logger.info("Сгенерированные поисковые запросы:")
+    for i, query in enumerate(queries, 1):
+        logger.info(f"{i}. {query}")
+
+
+if __name__ == '__main__':
+    main()
