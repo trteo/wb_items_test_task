@@ -1,10 +1,11 @@
 import asyncio
-from typing import Union, List, Dict
+from typing import Union, List, Dict, Tuple
 
 from loguru import logger
 from playwright.async_api import ElementHandle
 from playwright.async_api import Page
 
+from settings.config import settings
 from src.scrappers.exceptions import CatalogFindItemsError
 from src.scrappers.models import ProductPosition
 from src.scrappers.wildberries.wildberries_base import WildberriesBaseScrapper
@@ -44,17 +45,27 @@ class WildberriesCatalogScrapper(WildberriesBaseScrapper):
             queries: List[str]
     ) -> Dict[str, Union[ProductPosition, None]]:
         """ Организация поиска товара по всем запросам """
-        results = {}
-
-        for query in queries:
+        async def process_query(query: str) -> Tuple[str, Union[ProductPosition, None]]:
+            """ Функция для запуска поиска по конкретному запросу товара в gather """
             logger.info(f'Начинаю поиск товара по запросу: {query}')
             search_url = self.__build_search_url(query=query)
-            results[query] = await self.__search_product_by_query(
-                search_page_template_url=search_url,
-                product_url=product_url
-            )
+            try:
+                result = await self.__search_product_by_query(
+                    search_page_template_url=search_url,
+                    product_url=product_url
+                )
+            except Exception as e:
+                logger.error(f'При попытке найти страницу {query} для продукта {product_url} произошла ошибка:\n{e}')
+                result = None
 
-        return results
+            return query, result
+
+        tasks = [process_query(query) for query in queries]
+        results = await asyncio.gather(*tasks)
+
+        # Преобразуем список кортежей в словарь
+        logger.info(f'results: {results}')
+        return dict(results)
 
     @staticmethod
     def __build_search_url(query: str) -> str:
@@ -182,7 +193,7 @@ class WildberriesCatalogScrapper(WildberriesBaseScrapper):
     @staticmethod
     async def __scroll_page_to_the_end(page: Page):
         """
-        Функция проматывает страницу до конца что бы загрузить все товары
+        Функция проматывает страницу до конца, что бы загрузить все товары
         """
 
         viewport_height = await page.evaluate("window.innerHeight")
@@ -196,7 +207,7 @@ class WildberriesCatalogScrapper(WildberriesBaseScrapper):
             await page.evaluate(f"window.scrollTo(0, {current_position})")
 
             # Ждем подгрузки товаров
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(settings.PAGE_SCROLLING_SPEED)
 
             # Проверяем, дошли ли мы до конца страницы
             new_height = await page.evaluate("document.body.scrollHeight")

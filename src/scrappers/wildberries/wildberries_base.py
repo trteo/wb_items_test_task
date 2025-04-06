@@ -26,7 +26,6 @@ class WildberriesBaseScrapper:
 
     async def close(self) -> None:
         """ Закрытие всех ресурсов скраппера """
-
         if self._playwright:
             await self._playwright.stop()
         self._context = None

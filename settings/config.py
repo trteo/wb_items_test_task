@@ -11,6 +11,8 @@ class Settings(BaseSettings):
 
     BOT_TOKEN: SecretStr = ''
 
+    PAGE_SCROLLING_SPEED = 0.3
+
     class Config:
         env_file = Path(BASE_DIR, 'settings', 'env')
 
