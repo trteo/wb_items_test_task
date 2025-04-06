@@ -1,4 +1,6 @@
 import re
+import sys
+from typing import Dict
 
 from aiogram import Dispatcher, Bot, Router, F
 from aiogram.filters import Command
@@ -7,7 +9,13 @@ from loguru import logger
 
 from settings.config import settings
 from src.queries_extraction.rake import RAKEQueryExtractor
-from src.scrappers.wildberries import WildberriesProductScrapper
+from src.scrappers.models import ProductPosition
+from src.scrappers.wildberries.wildberries_product import WildberriesProductScrapper
+from src.scrappers.wildberries.wildberries_catalog import WildberriesCatalogScrapper
+
+logger.remove()
+logger.add(sys.stderr, level="INFO")
+
 
 WILDBERRIES_PRODUCT_URL_PATTERN = r'wildberries\.ru/catalog/\d+/detail\.aspx'
 
@@ -25,13 +33,16 @@ class TelegramBot:
         self._dp = Dispatcher()
         self._dp.include_router(self._router)
 
-        self._wb_crapper = WildberriesProductScrapper()
+        self._wb_product_scrapper = WildberriesProductScrapper()
+        self._wb_catalog_scrapper = WildberriesCatalogScrapper()
+
         self._queries_extractor = RAKEQueryExtractor()
 
     async def start_bot(self) -> None:
         logger.info('Запуск ТГ бота')
 
-        await self._wb_crapper.init()
+        await self._wb_product_scrapper.init()
+        await self._wb_catalog_scrapper.init()
 
         self.__register_routs()
         await self._dp.start_polling(self._bot)
@@ -39,7 +50,7 @@ class TelegramBot:
     async def stop_bot(self) -> None:
         logger.info('Остановка ТГ бота')
 
-        await self._wb_crapper.close()
+        await self._wb_product_scrapper.close()
         await self._bot.session.close()
 
         logger.info('Бот завершен успешно')
@@ -74,11 +85,9 @@ class TelegramBot:
                 cropped_url = 'https://www.' + re.search(
                     rf'({WILDBERRIES_PRODUCT_URL_PATTERN})', message.text
                 ).group()
-                logger.debug(f'Выделен адрес на товар: {cropped_url}')
+                logger.debug(f'Выделен адрес на <a href="{cropped_url}">товар</a>', parse_mode="HTML")
 
-                # product description block
-                product_scrapper = await self._wb_crapper.get_product_description(url=cropped_url)
-                logger.debug(f'Описание товара: {product_scrapper}\n Если оно верное, то первый бастион взят!!!')
+                replied_message = await message.reply(f'Начинаю поиск потенциальных запросов для товара: {cropped_url}')
 
                 # query extracting block
 
@@ -90,7 +99,30 @@ class TelegramBot:
                 positions = await self._wb_crapper.find_product_positions(product_url=cropped_url, queries=queries)
                 logger.info(f'По выделенным запросам товар находится на: {positions}')
 
-                await message.reply(cropped_url)
+                # forming answer
+
+                reply = self.__format_response_message(queries_positions=positions)
+
+                logger.info(f'Попытка отправить сообщение:\n {reply}')
+                await replied_message.edit_text(reply, parse_mode="HTML")
+
             except Exception as e:
                 await message.reply(f'При запросе произошла ошибка:\n{e}')
+                raise e
+
+    @staticmethod
+    def __format_response_message(queries_positions: Dict[str, ProductPosition]) -> str:
+        """ Формируем ответ содержащий позиции товаров в зависимости от запросов """
+        message_lines = ["Товар по запросам:\n"]
+
+        for query, position in queries_positions.items():
+            position_text = (
+                f'найден на {position.page_number} странице {position.position_on_page} позиции\n'
+                f'<a href="{position.page_url}">ссылка на страницу</a>'
+                if position else 'не найден\n'
+            )
+            message_lines.append(f'<b>{query}</b>: {position_text}')
+
+        return '\n'.join(message_lines)
+
 
