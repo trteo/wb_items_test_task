@@ -41,7 +41,7 @@ docker build -t wb_scrapper_tg_bot . && docker run -it wb_scrapper_tg_bot
 `PAGE_SCROLLING_SPEED` - скорость прокрутки страницы каталога до конца, задать если не все товары успевают подгрузиться \
 Default - 0.3 \
 `MAX_N_PAGES_TO_SEARCH_IN_CATALOG` - до которой страницы в каталоге будет идти скраппер в поисках товара \
-Default - 20 \
+Default - 30 
 
 ---
 
