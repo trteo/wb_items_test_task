@@ -11,7 +11,7 @@ class RAKEQueryExtractor:
     """
 
     def __init__(self):
-        self.MAX_OUTPUT_PHRASES = 3
+        self.MAX_OUTPUT_PHRASES = 5
         self.MIN_PHRASE_LENGTH = 2
         self.MAX_PHRASE_LENGTH = 5
 

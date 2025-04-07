@@ -17,10 +17,6 @@ class WildberriesCatalogScrapper(WildberriesBaseScrapper):
         * Поиск товара в выдаче по запросу
     """
 
-    def __init__(self) -> None:
-        super().__init__()
-        self.MAX_N_PAGES_TO_SEARCH = 10
-
     async def find_product_positions(
             self,
             product_url: str,
@@ -88,7 +84,9 @@ class WildberriesCatalogScrapper(WildberriesBaseScrapper):
         )
 
         if result is None:
-            logger.info(f'Товар {product_url} не найден на первых {self.MAX_N_PAGES_TO_SEARCH} страницах')
+            logger.info(
+                f'Товар {product_url} не найден на первых {settings.MAX_N_PAGES_TO_SEARCH_IN_CATALOG} страницах'
+            )
 
         return result
 
@@ -100,7 +98,7 @@ class WildberriesCatalogScrapper(WildberriesBaseScrapper):
         """Итерируется по страницам поиска, пока не найдет товар или не достигнет предела."""
 
         # TODO add run gather with batches for pages
-        for page_number in range(1, self.MAX_N_PAGES_TO_SEARCH + 1):
+        for page_number in range(1, settings.MAX_N_PAGES_TO_SEARCH_IN_CATALOG + 1):
             search_page_url = search_page_template_url.format(page_number=page_number)
             logger.info(f'Сканирую страницу: {search_page_url}')
 

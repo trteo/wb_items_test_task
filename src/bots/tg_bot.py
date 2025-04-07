@@ -93,30 +93,39 @@ class TelegramBot:
 
                 # product description block
                 try:
-                    product_scrapper = await self._wb_product_scrapper.get_product_description(url=cropped_url)
-                    logger.debug(f'Описание товара: {product_scrapper}\n Если оно верное, то первый бастион взят!!!')
+                    product_description = await self._wb_product_scrapper.get_product_description(url=cropped_url)
+                    logger.debug(f'Описание товара: {product_description}\n Если оно верное, то первый бастион взят!!!')
                 except ProductNotFound:
                     await replied_message.edit_text(f'Не удалось найти товар, проверьте актуальность ссылки')
                     return
 
                 # query extracting block
-                queries = self._queries_extractor.extract_query_from_description(product_scrapper)
+                queries = self._queries_extractor.extract_query_from_description(product_description)
                 logger.debug(f'Возможные запросы товара: {queries}')
 
-                new_message = f'Найдены возможные запросы:\n{"\n".join(queries)}'
+                queries_msg = "\n".join(queries)
+                new_message = f'Найдены возможные запросы:\n{queries_msg}'
                 logger.debug(f'Обновляю отправленное сообщение. Новое сообщение:\n{new_message}')
                 await replied_message.edit_text(new_message)
 
                 # search positions block
 
-                positions = await self._wb_crapper.find_product_positions(product_url=cropped_url, queries=queries)
+                # # Тк не успел прикрутить нормальную ML модель и найти бесплатную API LLM для выделения запросов
+                # # для теста парсинга лучше прописать поисковые запросы в этом списке
+
+                # queries = [
+                #     'зонт мужской автомат',
+                #     'зонт мужской',
+                # ]
+
+                positions = await self._wb_catalog_scrapper.find_product_positions(product_url=cropped_url, queries=queries)
                 logger.info(f'По выделенным запросам товар находится на: {positions}')
 
                 # forming answer
 
                 reply = self.__format_response_message(queries_positions=positions)
 
-                logger.info(f'Попытка отправить сообщение:\n {reply}')
+                logger.debug(f'Попытка отправить сообщение:\n {reply}')
                 await replied_message.edit_text(reply, parse_mode="HTML")
 
             except Exception as e:
@@ -132,7 +141,7 @@ class TelegramBot:
             position_text = (
                 f'найден на {position.page_number} странице {position.position_on_page} позиции\n'
                 f'<a href="{position.page_url}">ссылка на страницу</a>'
-                if position else 'не найден\n'
+                if position else 'не найден'
             )
             message_lines.append(f'<b>{query}</b>: {position_text}')
 
